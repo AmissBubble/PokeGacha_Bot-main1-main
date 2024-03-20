@@ -199,12 +199,12 @@ class PokemonBot:
         self.rarity_pokemon_count = 1
         try:
             pokemon, pokemon_amount = await self.generator.__anext__()
-        except:
+        except IndexError:
             markup = InlineKeyboardMarkup()
             return_to_pictures = InlineKeyboardButton("⬅️Go back", callback_data="go_back")
             markup.add(return_to_pictures)
             return await bot.edit_message_text(f"You don't have any {rarity} pokemons yet", chat_id, message_id, reply_markup=markup)
-
+        await bot.delete_message(chat_id, message_id)
         markup = InlineKeyboardMarkup()
         back = InlineKeyboardButton("<<", callback_data="back")
         number = InlineKeyboardButton(f'{self.rarity_pokemon_count}/{self.max_num_in_rarity}', callback_data="www")
