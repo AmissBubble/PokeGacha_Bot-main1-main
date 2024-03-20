@@ -1,6 +1,7 @@
 import random
 from datetime import datetime, timedelta
 from aiogram import types
+import asyncio
 import functions
 import energy
 import info
@@ -193,34 +194,63 @@ class PokemonBot:
         await bot.send_message(chat_id, f"You captured a {self.found_pokemon}!", reply_markup=markup)
 
         # bot.delete_message(chat_id, message_id)
+    async def show_first_pokemon_picture(self, chat_id, message_id, rarity: str):
+        self.generator = self.show_pictures_rarity(chat_id, rarity)
+        self.rarity_pokemon_count = 1
+        try:
+            pokemon, pokemon_amount = await self.generator.__anext__()
+        except:
+            markup = InlineKeyboardMarkup()
+            return_to_pictures = InlineKeyboardButton("⬅️Go back", callback_data="go_back")
+            markup.add(return_to_pictures)
+            return await bot.edit_message_text(f"You don't have any {rarity} pokemons yet", chat_id, message_id, reply_markup=markup)
 
-    async def increase_and_show_pokemon_picture(self, chat_id, message_id, num, rarity=""):
-        if num == 0:
-            self.generator = self.show_pictures_rarity(chat_id, rarity)
-
-        elif self.rarity_pokemon_count >= self.max_num_in_rarity:
-            self.rarity_pokemon_count = 0
-
-        self.rarity_pokemon_count += num
-        pokemon, pokemon_amount = await self.generator.__anext__()
         markup = InlineKeyboardMarkup()
         back = InlineKeyboardButton("<<", callback_data="back")
         number = InlineKeyboardButton(f'{self.rarity_pokemon_count}/{self.max_num_in_rarity}', callback_data="www")
         forward = InlineKeyboardButton(">>", callback_data="forward")
-        markup.add(back, number, forward)
-        await bot.edit_message_text(f'{pokemon} you have {pokemon_amount}', chat_id, message_id, reply_markup=markup)
+        return_to_pictures = InlineKeyboardButton("⬅️Go back", callback_data="go_back")
+        markup.add(back, number, forward, return_to_pictures)
+        pokemon_image = f'images/{pokemon}.webp'
+        with open(pokemon_image, 'rb') as pokemon_photo:
+            await bot.send_photo(chat_id, pokemon_photo, caption=f'1. {pokemon}\nYou have: {pokemon_amount}', reply_markup=markup )
+
+
+    async def increase_and_show_pokemon_picture(self, chat_id, message_id, num, rarity=""):
+
+        if self.rarity_pokemon_count >= self.max_num_in_rarity:
+            self.rarity_pokemon_count = 0
+
+        self.rarity_pokemon_count += num
+        pokemon_number_in_sequence = self.rarity_pokemon_count
+        pokemon, pokemon_amount = await self.generator.__anext__()
+        markup = InlineKeyboardMarkup()
+        back = InlineKeyboardButton("<<", callback_data="back")
+        number = InlineKeyboardButton(f'{pokemon_number_in_sequence}/{self.max_num_in_rarity}', callback_data="www")
+        forward = InlineKeyboardButton(">>", callback_data="forward")
+        return_to_pictures = InlineKeyboardButton("⬅️Go back", callback_data="go_back")
+        markup.add(back, number, forward, return_to_pictures)
+        pokemon_image = f'images/{pokemon}.webp'
+        with open(pokemon_image, 'rb') as pokemon_photo:
+            new_media = types.InputMediaPhoto(pokemon_photo, caption=f'{pokemon_number_in_sequence}. {pokemon}\nYou have: {pokemon_amount}')
+            await bot.edit_message_media(chat_id=chat_id, message_id=message_id, media=new_media, reply_markup=markup)
 
     async def decrease_and_show_pokemon_picture(self, chat_id, message_id, num):
         if self.rarity_pokemon_count <= 1:
             self.rarity_pokemon_count = self.max_num_in_rarity + 1
         self.rarity_pokemon_count -= num
+        pokemon_number_in_sequence = self.rarity_pokemon_count
         pokemon, pokemon_amount = await self.generator.__anext__()
         markup = InlineKeyboardMarkup()
         back = InlineKeyboardButton("<<", callback_data="back")
         number = InlineKeyboardButton(f'{self.rarity_pokemon_count}/{self.max_num_in_rarity}', callback_data="www")
         forward = InlineKeyboardButton(">>", callback_data="forward")
-        markup.add(back, number, forward)
-        await bot.edit_message_text(f'{pokemon} you have {pokemon_amount}', chat_id, message_id, reply_markup=markup)
+        return_to_pictures = InlineKeyboardButton("⬅️Go back", callback_data="go_back")
+        markup.add(back, number, forward, return_to_pictures)
+        pokemon_image = f'images/{pokemon}.webp'
+        with open(pokemon_image, 'rb') as pokemon_photo:
+            new_media = types.InputMediaPhoto(pokemon_photo, caption=f'{pokemon_number_in_sequence}. {pokemon}\nYou have: {pokemon_amount}')
+            await bot.edit_message_media(chat_id=chat_id, message_id=message_id, media=new_media, reply_markup=markup)
 
     async def show_captured_or_not_buttons(self, chat_id, message_id):
         # Отображение кнопки "Try again" после неудачной попытки захвата

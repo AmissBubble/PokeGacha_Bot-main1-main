@@ -1,6 +1,7 @@
 from aiogram import types
 from aiogram.dispatcher.filters import Text
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.exceptions import MessageNotModified
 import asyncio
 
 import info
@@ -21,7 +22,7 @@ async def main():
         await bot.session.close()
 
 
-# Если файл запущен напрямую (а не импортирован как модуль)
+
 if __name__ == "__main__":
     # Создание экземпляра класса PokemonBot
     pokemon_bot = PokemonBot()
@@ -93,7 +94,8 @@ if __name__ == "__main__":
         except StopIteration:
             await bot.edit_message_text('This Item is not valid anymore, press /pokedex to get up-to-date version',
                                         call.message.chat.id, call.message.message_id)
-
+        except MessageNotModified:
+            pass
 
     @dp.callback_query_handler(Text(equals="All_pokedex"))
     async def show_allpokedex(call: types.CallbackQuery):
@@ -123,20 +125,30 @@ if __name__ == "__main__":
 
     @dp.callback_query_handler(Text(endswith='_pictures'))
     async def show_rarity_pictures(call):
-        await pokemon_bot.increase_and_show_pokemon_picture(call.message.chat.id, call.message.message_id, 0,
-                                                            call.data[:-9])
+        await pokemon_bot.show_first_pokemon_picture(call.message.chat.id, call.message.message_id, call.data[:-9])
 
 
     @dp.callback_query_handler(Text(equals='forward'))
     async def change_pokemon_picture(call):
-        await pokemon_bot.increase_and_show_pokemon_picture(call.message.chat.id, call.message.message_id, 1)
-
+        try:
+            await pokemon_bot.increase_and_show_pokemon_picture(call.message.chat.id, call.message.message_id, 1)
+        except MessageNotModified:
+            pass
 
     @dp.callback_query_handler(Text(equals='back'))
     async def change_pokemon_picture(call):
         chat_id = call.message.chat.id
-        await pokemon_bot.decrease_and_show_pokemon_picture(chat_id, call.message.message_id, 1)
+        try:
+            await pokemon_bot.decrease_and_show_pokemon_picture(chat_id, call.message.message_id, 1)
+        except MessageNotModified:
+            pass
 
+    @dp.callback_query_handler(Text(equals='go_back'))
+    async def go_to_pictures_start(call):
+        chat_id = call.message.chat.id
+        await bot.delete_message(chat_id, call.message.message_id)
+        markups = await pokemon_bot.command_markups('pictures')
+        await bot.send_message(chat_id, "Choose the rarity you want to see", reply_markup=markups)
 
     @dp.callback_query_handler(Text(equals=['go', 'keepgoing', 'skip', 'retry', 'catch']))
     async def handle_go_callback_wrapper(call: types.CallbackQuery):
