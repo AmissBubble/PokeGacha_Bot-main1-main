@@ -214,9 +214,11 @@ async def list_pictures_rarity(user_id, requested_rarity):
         if pokemons is None:
             return "You haven't caught any Pokémon yet."
 
-        list_of_rarity_pokemons = [[pokemon_name, poke_count] for poke_count, pokemon_name in
-                                   zip(pokemons[3:], POKEMON_LIST) if
-                                   poke_count > 0 and pokemon_name in RARITY_DICT[requested_rarity]]
+        if requested_rarity == "All":
+            list_of_rarity_pokemons = [[pokemon_name ,poke_count] for poke_count, pokemon_name in
+                               zip(pokemons[3:], POKEMON_LIST) if poke_count > 0]
+        else:
+            list_of_rarity_pokemons = [[pokemon_name, poke_count] for poke_count, pokemon_name in zip(pokemons[3:], POKEMON_LIST) if poke_count > 0 and pokemon_name in RARITY_DICT[requested_rarity]]
 
         return list_of_rarity_pokemons
 
