@@ -291,6 +291,7 @@ async def main():
     # print(show_pokedex(668210174))
     # print(time_until_next_midnight())
     # await add_pokebols(668210174, 10)
+    await capture_pokemon(668210174, "Ditto")
     print(await pokebols_number(668210174))
 
 if __name__ == "__main__":

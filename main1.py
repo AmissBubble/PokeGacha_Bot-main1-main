@@ -1,7 +1,7 @@
 from aiogram import types
 from aiogram.dispatcher.filters import Text
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.exceptions import MessageNotModified
+from aiogram.utils.exceptions import MessageNotModified, BadRequest
 import asyncio
 
 import info
@@ -134,6 +134,8 @@ if __name__ == "__main__":
             await pokemon_bot.increase_and_show_pokemon_picture(call.message.chat.id, call.message.message_id, 1)
         except MessageNotModified:
             pass
+        except BadRequest:
+            await bot.send_message(call.message.chat.id, "Please slow down, bot cannot process quick button presses")
 
     @dp.callback_query_handler(Text(equals='back'))
     async def change_pokemon_picture(call):
@@ -142,6 +144,8 @@ if __name__ == "__main__":
             await pokemon_bot.decrease_and_show_pokemon_picture(chat_id, call.message.message_id, 1)
         except MessageNotModified:
             pass
+        except BadRequest:
+            await bot.send_message(call.message.chat.id, "Please slow down, bot cannot process quick button presses")
 
     @dp.callback_query_handler(Text(equals='go_back'))
     async def go_to_pictures_start(call):
