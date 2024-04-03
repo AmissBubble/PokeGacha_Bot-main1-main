@@ -3,15 +3,16 @@ from aiogram.dispatcher.filters import Text
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.exceptions import MessageNotModified, BadRequest
 import asyncio
-
+from class_reply import under_keyboard
 import info
 import functions
 import energy
 from class_PokemonBot import PokemonBot
+from aiogram.utils.exceptions import MessageNotModified
 
 # Загрузка токена из переменных окружения
 from info import bot, dp
-
+under_keyboard_class = under_keyboard()
 
 async def main():
     try:
@@ -35,16 +36,22 @@ if __name__ == "__main__":
         await pokemon_bot.start(message)
 
 
-    @dp.message_handler(commands=['pokedex'])
+    @dp.message_handler(commands=['📱Pokedex'])
     async def deploy_pokedex(message: types.Message):
         chat_id = message.chat.id
         await pokemon_bot.show_pokedex_variations(chat_id, "Select what do you want to see in Pokédex")
 
 
-    @dp.message_handler(commands=['go'])
+    @dp.message_handler(commands=['🏃‍♂️Start_Adventure'])
     async def show_go_message(message: types.Message):
         chat_id = message.chat.id
+        await pokemon_bot.gain_energy_at_start(chat_id)
         await pokemon_bot.show_go_buttons(chat_id)
+    
+    @dp.message_handler(commands=['🔚End_Adventure'])
+    async def show_menu_message(message: types.Message):
+        
+        await pokemon_bot.del_last_go_message(message)
 
 
     @dp.message_handler(commands=['help'])
@@ -52,7 +59,7 @@ if __name__ == "__main__":
         await bot.send_message(message.chat.id, info.HelpInfo, parse_mode='HTML')
 
 
-    @dp.message_handler(commands=['get_pokebols'])
+    @dp.message_handler(commands=['🔴⚪Get_Pokebolls'])
     async def get_pokebols_handler(message: types.Message):
         await pokemon_bot.get_pokebols(message.chat.id)
 
@@ -62,12 +69,13 @@ if __name__ == "__main__":
         await pokemon_bot.gain_energy(message.chat.id)
 
 
-    @dp.message_handler(commands=['my_pokemons'])
+    @dp.message_handler(commands=['🎒My_pokemons'])
     async def my_pokemons_handler(message: types.Message):
-        await pokemon_bot.show_my_pokemons_variations(message.chat.id)
+        keyboard = pokemon_bot.my_pokemons_keyboard()
+        await message.answer("Выберите, как вы хотите просмотреть своих покемонов:", reply_markup=keyboard)
+    
 
-
-    @dp.message_handler(commands=['items'])
+    @dp.message_handler(commands=['🍽️Meal'])
     async def items_handler(message: types.Message):
         await pokemon_bot.items_buttons(message.chat.id)
 
@@ -77,10 +85,27 @@ if __name__ == "__main__":
         await bot.send_message(message.chat.id, info.RARITY, parse_mode='HTML')
 
 
-    @dp.message_handler(commands=['pictures'])
+    @dp.callback_query_handler(Text(equals='🖼️pictures')) #🖼️
     async def see_in_pictures(message: types.Message):
         markups = await pokemon_bot.command_markups('pictures')
         await bot.send_message(message.chat.id, "Choose the rarity you want to see", reply_markup=markups)
+
+    @dp.callback_query_handler(lambda c: c.data == 'view_list')
+    async def show_pokemon_list(callback_query: types.CallbackQuery):
+        chat_id = callback_query.message.chat.id
+        message_id = callback_query.message.message_id
+        await bot.delete_message(chat_id, message_id)
+        await pokemon_bot.show_my_pokemons_variations(callback_query.message.chat.id)
+        await bot.answer_callback_query(callback_query.id)
+
+    @dp.callback_query_handler(lambda c: c.data == 'view_photos')
+    async def show_pokemon_photos(callback_query: types.CallbackQuery):
+        chat_id = callback_query.message.chat.id
+        message_id = callback_query.message.message_id
+        await bot.delete_message(chat_id, message_id)
+        markups = await pokemon_bot.command_markups('pictures')
+        await bot.send_message(callback_query.message.chat.id, "Choose the rarity you want to see", reply_markup=markups)
+        
 
 
     @dp.callback_query_handler(Text(equals="next"))
@@ -92,10 +117,11 @@ if __name__ == "__main__":
             text = await pokemon_bot.generator.__anext__()
             await bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
         except StopIteration:
-            await bot.edit_message_text('This Item is not valid anymore, press /pokedex to get up-to-date version',
+            await bot.edit_message_text('This Item is not valid anymore, press /📱Pokedex to get up-to-date version',
                                         call.message.chat.id, call.message.message_id)
         except MessageNotModified:
             pass
+
 
     @dp.callback_query_handler(Text(equals="All_pokedex"))
     async def show_allpokedex(call: types.CallbackQuery):
@@ -137,6 +163,7 @@ if __name__ == "__main__":
         except BadRequest:
             await bot.send_message(call.message.chat.id, "Please slow down, bot cannot process quick button presses")
 
+
     @dp.callback_query_handler(Text(equals='back'))
     async def change_pokemon_picture(call):
         chat_id = call.message.chat.id
@@ -147,6 +174,7 @@ if __name__ == "__main__":
         except BadRequest:
             await bot.send_message(call.message.chat.id, "Please slow down, bot cannot process quick button presses")
 
+
     @dp.callback_query_handler(Text(equals='go_back'))
     async def go_to_pictures_start(call):
         chat_id = call.message.chat.id
@@ -154,7 +182,7 @@ if __name__ == "__main__":
         markups = await pokemon_bot.command_markups('pictures')
         await bot.send_message(chat_id, "Choose the rarity you want to see", reply_markup=markups)
 
-    @dp.callback_query_handler(Text(equals=['go', 'keepgoing', 'skip', 'retry', 'catch']))
+    @dp.callback_query_handler(Text(equals=['🏃‍♂️Start_Adventure', 'keepgoing', 'skip', 'retry', 'catch']))
     async def handle_go_callback_wrapper(call: types.CallbackQuery):
         markup = types.InlineKeyboardMarkup()
         await bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup)
@@ -165,6 +193,17 @@ if __name__ == "__main__":
         Text(equals=['check_bread', 'check_rice', 'check_ramen', 'check_spaghetti']))  # обрабатывает колбэк
     async def handle_check_bread(call: types.CallbackQuery):
         await pokemon_bot.item_handler(call)  # использует хлеб
+
+    @dp.callback_query_handler(lambda c: c.data == 'use_candy')
+    async def use_candy(call: types.CallbackQuery):
+        user_id = call.message.chat.id
+        chat_id = call.message.chat.id
+        result = await pokemon_bot.candy_button(call)  # Вызов метода, который проверяет и использует Candy
+        if result:
+            # Увеличиваем счетчик использований "Candy" на 1 или инициализируем его, если не было использований
+            pokemon_bot.candy_usage[chat_id] = pokemon_bot.candy_usage.get(chat_id, 0) + 1
+            
+        
 
 
     # Запуск бота
