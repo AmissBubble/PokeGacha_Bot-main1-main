@@ -30,7 +30,7 @@ class under_keyboard:
         
         markup.add(button4)  # Добавит кнопку в новый ряд
         await bot.send_message(message.chat.id,
-                       f"Hi, {message.from_user.first_name}!\nWelcome to Poké-Hunter. This bot allows you to search and catch Pokémons.\nPress (🏃‍♂️Start_Adventure) to start your adventure.\nPress /help for more information.",
+                       f"Hi, {message.from_user.first_name}!\nWelcome to Poké-Hunter. This bot allows you to search and catch Pokémons.\nPress (/🏃‍♂️Start_Adventure) to start your adventure.\nPress /help for more information.",
                        reply_markup=markup)
         
     def reply_menu(self):
@@ -47,9 +47,8 @@ class under_keyboard:
         markup.add(button5) 
         return markup 
     
-    async def back_to_menu(self, message):
-        
-        
+    async def back_to_menu(self):
+
         markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
         # Добавление каждой кнопки в отдельный ряд
         button = KeyboardButton('/🏃‍♂️Start_Adventure')
@@ -65,8 +64,7 @@ class under_keyboard:
         button4 = KeyboardButton('/🍽️Meal')
         
         markup.add(button4)  # Добавит кнопку в новый ряд
-        
-        await bot.send_message(chat_id=message.chat.id, text='Going to Menu', reply_markup=markup)
+        return markup
 
 
         

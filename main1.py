@@ -1,26 +1,31 @@
+from typing import Dict, Any
+
 from aiogram import types
 from aiogram.dispatcher.filters import Text
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.exceptions import MessageNotModified, BadRequest
+from aiogram.utils.exceptions import MessageNotModified, BadRequest, MessageToEditNotFound, MessageIdInvalid, MessageToDeleteNotFound
 import asyncio
 from class_reply import under_keyboard
 import info
 import functions
 import energy
 from class_PokemonBot import PokemonBot
-from aiogram.utils.exceptions import MessageNotModified
+
 
 # Загрузка токена из переменных окружения
 from info import bot, dp
 under_keyboard_class = under_keyboard()
 
 
-users_bot = {}
+users_bot: dict[int, PokemonBot] = {}
 
 async def main():
     try:
         await functions.create_all_tables()
-        await dp.start_polling()
+        try:
+            await dp.start_polling()
+        except Exception as e:
+            print(e)
     finally:
         await bot.session.close()
 
@@ -54,14 +59,17 @@ if __name__ == "__main__":
     async def show_go_message(message: types.Message):
         chat_id = message.chat.id
         await create_bot_class_for_user(chat_id)
-        await users_bot[chat_id].gain_energy_at_start(chat_id)
-        await users_bot[chat_id].show_go_buttons(chat_id)
+        user_bot = users_bot[chat_id]
+        user_bot.sleeping_task = asyncio.create_task(user_bot.start_adventure(chat_id))
     
     @dp.message_handler(commands=['🔚End_Adventure'])
     async def show_menu_message(message: types.Message):
         chat_id = message.chat.id
         await create_bot_class_for_user(chat_id)
-        await users_bot[chat_id].del_last_go_message(message)
+        try:
+            users_bot[chat_id].sleeping_task.cancel()
+        except AttributeError:
+            await users_bot[chat_id].end_adventure_manually(chat_id)
 
 
     @dp.message_handler(commands=['help'])
@@ -140,11 +148,12 @@ if __name__ == "__main__":
         try:
             text = await users_bot[chat_id].generator.__anext__()
             await bot.edit_message_text(text, chat_id, call.message.message_id, reply_markup=markup)
-        except StopIteration:
-            await bot.edit_message_text('This Item is not valid anymore, press /📱Pokedex to get up-to-date version',
+        except AttributeError:
+            await bot.edit_message_text('This Item is not valid anymore, \npress /📱Pokedex to get up-to-date version',
                                         chat_id, call.message.message_id)
         except MessageNotModified:
-            pass
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id)
+
 
 
     @dp.callback_query_handler(Text(equals="All_pokedex"))
@@ -166,24 +175,29 @@ if __name__ == "__main__":
         chat_id = call.message.chat.id
         await create_bot_class_for_user(chat_id)
         markup = await users_bot[chat_id].command_markups('pokedex')
-        await bot.edit_message_text(await functions.show_pokedex_rarity(chat_id, call.data[:-8]), chat_id,
-                                    call.message.message_id, reply_markup=markup)
-
+        try:
+            await bot.edit_message_text(await functions.show_pokedex_rarity(chat_id, call.data[:-8]), chat_id, call.message.message_id, reply_markup=markup)
+        except MessageNotModified:
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id)
 
     @dp.callback_query_handler(Text(endswith='_pokemons'))
     async def show_rarity_pokemons(call: types.CallbackQuery):
         chat_id = call.message.chat.id
         await create_bot_class_for_user(chat_id)
         markup = await users_bot[chat_id].command_markups('pokemons')
-        await bot.edit_message_text(await functions.show_pokemons_rarity(chat_id, call.data[:-9]), chat_id,
-                                    call.message.message_id, reply_markup=markup)
-
+        try:
+            await bot.edit_message_text(await functions.show_pokemons_rarity(chat_id, call.data[:-9]), chat_id, call.message.message_id, reply_markup=markup)
+        except MessageNotModified:
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id)
 
     @dp.callback_query_handler(Text(endswith='_pictures'))
     async def show_rarity_pictures(call):
         chat_id = call.message.chat.id
         await create_bot_class_for_user(chat_id)
-        await users_bot[chat_id].show_first_pokemon_picture(chat_id, call.message.message_id, call.data[:-9])
+        try:
+            await users_bot[chat_id].show_first_pokemon_picture(chat_id, call.message.message_id, call.data[:-9])
+        except MessageToDeleteNotFound:
+            pass
 
 
     @dp.callback_query_handler(Text(equals='forward'))
@@ -194,8 +208,7 @@ if __name__ == "__main__":
         except MessageNotModified:
             pass
         except BadRequest:
-            await bot.send_message(chat_id, "Please slow down, bot cannot process quick button presses")
-
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id, "❗❗❗Please slow down, bot cannot process quick button presses❗❗❗")
 
     @dp.callback_query_handler(Text(equals='back'))
     async def change_pokemon_picture(call):
@@ -216,14 +229,22 @@ if __name__ == "__main__":
         markups = await users_bot[chat_id].command_markups('pictures')
         await bot.send_message(chat_id, "Choose the rarity you want to see", reply_markup=markups)
 
-    @dp.callback_query_handler(Text(equals=['🏃‍♂️Start_Adventure', 'keepgoing', 'skip', 'retry', 'catch']))
+    @dp.callback_query_handler(Text(equals=['Go', 'keepgoing', 'skip', 'retry', 'catch']))
     async def handle_go_callback_wrapper(call: types.CallbackQuery):
         markup = types.InlineKeyboardMarkup()
         chat_id = call.message.chat.id
         await create_bot_class_for_user(chat_id)
-        await bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
-        await users_bot[chat_id].handle_go_callback(call)
-
+        try:
+            await bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
+            await users_bot[chat_id].handle_go_callback(call)
+        except MessageToEditNotFound:
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id)
+        except MessageNotModified:
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id)
+        except MessageIdInvalid:
+            await users_bot[chat_id].slow_down_message(chat_id)
+        except MessageToDeleteNotFound: #значит приключение закончилось
+            pass
 
     @dp.callback_query_handler(
         Text(equals=['check_bread', 'check_rice', 'check_ramen', 'check_spaghetti']))  # обрабатывает колбэк
@@ -245,4 +266,7 @@ if __name__ == "__main__":
 
 
     # Запуск бота
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt")
