@@ -60,7 +60,11 @@ if __name__ == "__main__":
         chat_id = message.chat.id
         await create_bot_class_for_user(chat_id)
         user_bot = users_bot[chat_id]
-        user_bot.sleeping_task = asyncio.create_task(user_bot.start_adventure(chat_id))
+        if user_bot.last_message_id is not None:
+            await user_bot.adventure_already_in_process(chat_id)
+        else:
+            user_bot.sleeping_task = asyncio.create_task(user_bot.start_adventure(chat_id))
+
     
     @dp.message_handler(commands=['🔚End_Adventure'])
     async def show_menu_message(message: types.Message):
@@ -218,8 +222,7 @@ if __name__ == "__main__":
         except MessageNotModified:
             pass
         except BadRequest:
-            await bot.send_message(chat_id, "Please slow down, bot cannot process quick button presses")
-
+            await users_bot[chat_id].slow_down_message(chat_id, call.message.message_id, "❗❗❗Please slow down, bot cannot process quick button presses❗❗❗")
 
     @dp.callback_query_handler(Text(equals='go_back'))
     async def go_to_pictures_start(call):

@@ -110,33 +110,35 @@ class PokemonBot:
             # Если информация о gen отсутствует, обрабатывайте как обычно или сообщите об ошибке
             print(f"No gen info available for chat_id {chat_id}")
 
+
+    async def adventure_already_in_process(self, chat_id):
+        sent_mess = await bot.send_message(chat_id, "You are already in adventure")
+        await asyncio.sleep(10)  # ждем что б удалить сообщение "You are already in adventure"
+        await bot.delete_message(chat_id, sent_mess.message_id)
+
     async def start_adventure(self, chat_id):
-        if self.last_message_id is not None:
-            # значит  adventure уже запустилось
-            sent_mess = await bot.send_message(chat_id, "You are already in adventure")
-            await asyncio.sleep(10)  # ждем что б удалить сообщение "You are already in adventure"
-            await bot.delete_message(chat_id, sent_mess.message_id)
-        else:
-            await self.gain_energy_at_start(chat_id)
-            # Отправка кнопки "Go" для начала поиска покемона
-            markup = types.InlineKeyboardMarkup()
-            button_go = types.InlineKeyboardButton('Go', callback_data='Go')
-            markup.add(button_go)
-            sent_message = await bot.send_message(chat_id, "Press 'Go' to start searching for a Pokemon:",
-                                                  reply_markup=markup)
-            self.last_message_id = [sent_message.message_id]
-            try:
-                # спит указанное количество времени, и завершает поход по истечению этого времени
-                # сон может прерваться и adventure закончится преждевременно если посьзователь нажмет end adventure раньше
-                await asyncio.sleep(7200)
-                await bot.send_message(chat_id=chat_id,
-                                       text="You've spent 2 hours being in adventure, it's time to take a break.\nGoing to Menu")
-            except asyncio.CancelledError:
-                print('sleep canceled')
-            finally:
-                for message_id in self.last_message_id:
-                    await bot.delete_message(chat_id, message_id)
-                await self.end_adventure_manually(chat_id)
+        await self.gain_energy_at_start(chat_id)
+        # Отправка кнопки "Go" для начала поиска покемона
+        markup = types.InlineKeyboardMarkup()
+        button_go = types.InlineKeyboardButton('Go', callback_data='Go')
+        markup.add(button_go)
+        sent_message = await bot.send_message(chat_id, "Press 'Go' to start searching for a Pokemon:",
+                                              reply_markup=markup)
+        self.last_message_id = [sent_message.message_id]
+        try:
+            # спит указанное количество времени, и завершает поход по истечению этого времени
+            # сон может прерваться и adventure закончится преждевременно если посьзователь нажмет end adventure раньше
+            await asyncio.sleep(6900)
+            await bot.send_message(chat_id, "Your adventure will end in 5 minutes")
+            await asyncio.sleep(300)
+            await bot.send_message(chat_id=chat_id,
+                                   text="You've spent 2 hours being in adventure, it's time to take a break.\nGoing to Menu")
+        except asyncio.CancelledError:
+            print('sleep canceled')
+        finally:
+            for message_id in self.last_message_id:
+                await bot.delete_message(chat_id, message_id)
+            await self.end_adventure_manually(chat_id)
 
     async def end_adventure_manually(self, chat_id, text="Your adventure has ended\nGoing to Menu"):
         markup = await under_keyboard_class.back_to_menu()

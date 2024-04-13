@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher
 MISHA_BOT_API = '5629818025:AAE3CAZFs6uhMcWZodFUdpKhSJu5awmGK_o'
 POKE_BOT_API = "6831587612:AAEUQ4m30-Pajetdnw0AwZ4omaNmzVkc-4o"
 
-TOKEN = POKE_BOT_API
+TOKEN = MISHA_BOT_API
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
