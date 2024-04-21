@@ -255,7 +255,7 @@ class PokemonBot:
         markup.add(back, number, forward, return_to_pictures)
         pokemon_image = f'images/{pokemon}.webp'
         with open(pokemon_image, 'rb') as pokemon_photo:
-            await bot.send_photo(chat_id, pokemon_photo, caption=f'1. {pokemon}\nYou have: {pokemon_amount}',
+            await bot.send_photo(chat_id, pokemon_photo, caption=f'1. {pokemon}\nYou have: {pokemon_amount}\n{info.POKEMON_DESCRIPTIONS[pokemon]}',
                                  reply_markup=markup)
 
     async def increase_and_show_pokemon_picture(self, chat_id, message_id, num, rarity=""):
@@ -275,7 +275,7 @@ class PokemonBot:
         pokemon_image = f'images/{pokemon}.webp'
         with open(pokemon_image, 'rb') as pokemon_photo:
             new_media = types.InputMediaPhoto(pokemon_photo,
-                                              caption=f'{pokemon_number_in_sequence}. {pokemon}\nYou have: {pokemon_amount}')
+                                              caption=f'{pokemon_number_in_sequence}. {pokemon}\nYou have: {pokemon_amount}\n{info.POKEMON_DESCRIPTIONS[pokemon]}')
             await bot.edit_message_media(chat_id=chat_id, message_id=message_id, media=new_media, reply_markup=markup)
 
     async def decrease_and_show_pokemon_picture(self, chat_id, message_id, num):
@@ -293,7 +293,7 @@ class PokemonBot:
         pokemon_image = f'images/{pokemon}.webp'
         with open(pokemon_image, 'rb') as pokemon_photo:
             new_media = types.InputMediaPhoto(pokemon_photo,
-                                              caption=f'{pokemon_number_in_sequence}. {pokemon}\nYou have: {pokemon_amount}')
+                                              caption=f'{pokemon_number_in_sequence}. {pokemon}\nYou have: {pokemon_amount}\n{info.POKEMON_DESCRIPTIONS[pokemon]}')
             await bot.edit_message_media(chat_id=chat_id, message_id=message_id, media=new_media, reply_markup=markup)
 
     async def show_captured_or_not_buttons(self, chat_id):
